@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VMS Pro - Smart Booking System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { 
+            /* Menggunakan gambar truck10.jpeg sebagai background */
+            background: url('truck10.jpeg') no-repeat center center fixed; 
+            background-size: cover;
+            min-height: 100vh; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
+        }
+        /* Efek Kaca (Glassmorphism) */
+        .glass { 
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(10px);
+            border-radius: 24px; 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
+        }
+        select { 
+            appearance: none; 
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); 
+            background-repeat: no-repeat; 
+            background-position: right 1rem center; 
+            background-size: 1em; 
+        }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="glass w-full max-w-md p-8">
+        <div class="text-center mb-6">
+            <div class="bg-yellow-400 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3 shadow-lg">
+                <i class="fas fa-truck-loading text-blue-900 text-3xl"></i>
+            </div>
+            <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight">VMS Pro</h1>
+            <p class="text-blue-600 font-semibold text-sm">Logistics Monitoring System</p>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1">DATA PENGIRIMAN</label>
+                <input type="text" id="noDeliv" placeholder="Nomor Delivery" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all">
+            </div>
+            <input type="text" id="tujuan" placeholder="Tujuan Bongkar" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all">
+            <input type="text" id="nopol" placeholder="Nopol & Jenis Unit" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all">
+            
+            <div class="grid grid-cols-1 gap-3">
+                <select id="waCustomer" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-sm bg-white">
+                    <option value="" disabled selected>Pilih Tujuan WhatsApp</option>
+                    <option value="6281219032195">Admin Ikk1 (6281219032195)</option>
+                    <option value="6285929066179">Admin Ikk2 (6285929066179)</option>
+                    <option value="628570767">Tjiwi Kimia</option>
+                    <option value="6281808000449">GPS Semarang</option>
+                </select>
+
+                <select id="emailCustomer" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-sm bg-white">
+                    <option value="" disabled selected>Pilih Alamat Email</option>
+                    <option value="karyawangsa.investama@gmail.com">Karyawangsa Investama</option>
+                    <option value="IKK-Logistic_Local_Delivery@app.co.id">Admin Ikk1</option>
+                    <option value="yohari_giyatssabri@app.co.id">Admin Ikk2</option>
+                    <option value="Yonny_E_Widhianto@app.co.id">Tjiwi Kimia</option>
+                    <option value="aning@muliagrand.com">MGM Gresik</option>
+                </select>
+            </div>
+
+            <div class="pt-4 space-y-3">
+                <button onclick="prosesBooking('WA')" class="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-bold py-4 rounded-2xl shadow-lg flex items-center justify-center transition-all active:scale-95">
+                    <i class="fab fa-whatsapp mr-2 text-2xl"></i> Booking via WA
+                </button>
+                <button onclick="prosesBooking('EMAIL')" id="btnEmail" class="w-full bg-[#EA4335] hover:bg-[#C5221F] text-white font-bold py-4 rounded-2xl shadow-lg flex items-center justify-center transition-all active:scale-95">
+                    <i class="fas fa-paper-plane mr-2 text-xl"></i> Auto-Email System
+                </button>
+            </div>
+        </div>
+
+        <div class="mt-6 flex flex-col items-center space-y-2">
+            <a href="monitoring.html" class="text-blue-700 font-bold text-xs underline hover:text-blue-900 italic">Buka Dashboard Monitoring →</a>
+            
+            <p class="text-[10px] text-gray-400 font-medium pt-2">
+                © 2025 Giyas. All Rights Reserved.
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCWsxfve--l3x9xZ54DspANs3HaUswjQZc",
+            authDomain: "booking-customer-d5838.firebaseapp.com",
+            projectId: "booking-customer-d5838",
+            storageBucket: "booking-customer-d5838.appspot.com",
+            messagingSenderId: "535433870312",
+            appId: "1:535433870312:web:8ec3b6b7f97196ce2cc25d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbzCa1f38K8cdVlOp65EQfk3IeTXWjMtCGKYXFvQmurdNDjmEyLMgecyElrFNHR3OSdcjw/exec';
+
+        async function prosesBooking(metode) {
+            const btn = document.getElementById('btnEmail');
+            const emailDropdown = document.getElementById('emailCustomer');
+            
+            const data = {
+                noDeliv: document.getElementById('noDeliv').value,
+                tujuan: document.getElementById('tujuan').value,
+                nopol: document.getElementById('nopol').value,
+                wa: document.getElementById('waCustomer').value,
+                email: emailDropdown.value,
+                namaPenerima: emailDropdown.options[emailDropdown.selectedIndex].text
+            };
+
+            if(!data.noDeliv || !data.tujuan || !data.nopol || !data.email || !data.wa) {
+                alert("Waduh! Data belum lengkap, mohon diisi semua ya.");
+                return;
+            }
+
+            try {
+                if(metode === 'EMAIL') btn.innerText = "⏳ Sedang Mengirim...";
+
+                await addDoc(collection(db, "bookings"), {
+                    ...data,
+                    status: "Pending",
+                    timestamp: serverTimestamp()
+                });
+
+                await fetch(scriptURL, { 
+                    method: 'POST', 
+                    mode: 'no-cors',
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data) 
+                });
+
+                if(metode === 'WA') {
+                    const pesan = `Halo Team Customer, Izin booking slot bongkar:\n📍 *Tujuan:* ${data.tujuan}\n📦 *No Delivery:* ${data.noDeliv}\n🚛 *Unit:* ${data.nopol}`;
+                    window.open(`https://wa.me/${data.wa}?text=${encodeURIComponent(pesan)}`, '_blank');
+                }
+
+                alert("Mantap! Booking Berhasil Terkirim. ✅");
+                location.reload();
+
+            } catch (e) {
+                alert("Gagal kirim data, cek koneksi internetmu.");
+            } finally {
+                if(metode === 'EMAIL') btn.innerHTML = '<i class="fas fa-paper-plane mr-2 text-xl"></i> Auto-Email System';
+            }
+        }
+        window.prosesBooking = prosesBooking;
+    </script>
+</body>
+</html>

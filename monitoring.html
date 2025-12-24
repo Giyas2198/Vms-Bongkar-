@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VMS Dashboard - Monitoring Real-Time</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { 
+            background: #f1f5f9; 
+            min-height: 100vh; 
+            padding: 20px; 
+            font-family: 'Inter', sans-serif;
+        }
+        .card { 
+            background: white; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); 
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            border-width: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight">
+                    <i class="fas fa-chart-line mr-2 text-blue-600"></i> Monitoring VMS
+                </h1>
+                <p class="text-gray-500 text-sm">Logistics Dashboard & Real-Time Booking Tracking</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="index.html" class="bg-white text-gray-700 border border-gray-200 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all shadow-sm">
+                    <i class="fas fa-plus mr-2"></i> Buat Booking Baru
+                </a>
+                <button onclick="location.reload()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-md shadow-blue-200">
+                    <i class="fas fa-sync-alt mr-2"></i> Refresh
+                </button>
+            </div>
+        </div>
+
+        <div class="card overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50 border-b border-gray-100 text-gray-400 text-[11px] uppercase tracking-wider">
+                        <tr>
+                            <th class="p-5 font-bold">Waktu Request</th>
+                            <th class="p-5 font-bold">No Delivery</th>
+                            <th class="p-5 font-bold">Unit / Nopol</th>
+                            <th class="p-5 font-bold">Tujuan</th>
+                            <th class="p-5 font-bold text-center">Status</th>
+                            <th class="p-5 font-bold text-blue-600">Jadwal Bongkar (Customer)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="bg-white divide-y divide-gray-50">
+                        <tr>
+                            <td colspan="6" class="p-10 text-center text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i> Menghubungkan ke database...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="mt-6 text-center">
+            <p class="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-bold">© 2025 VMS Pro System • Powered by Firebase Realtime</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // CONFIG FIREBASE (Gunakan config yang sama dengan index.html kamu)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCWsxfve--l3x9xZ54DspANs3HaUswjQZc",
+            authDomain: "booking-customer-d5838.firebaseapp.com",
+            projectId: "booking-customer-d5838",
+            storageBucket: "booking-customer-d5838.appspot.com",
+            messagingSenderId: "535433870312",
+            appId: "1:535433870312:web:8ec3b6b7f97196ce2cc25d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Ambil data real-time, diurutkan dari yang terbaru
+        const q = query(collection(db, "bookings"), orderBy("timestamp", "desc"));
+        
+        onSnapshot(q, (snapshot) => {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = "";
+            
+            if (snapshot.empty) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-gray-400 italic">Belum ada data pengiriman hari ini.</td></tr>`;
+                return;
+            }
+
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                
+                // Format Waktu Request
+                const tglRequest = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleString('id-ID', {
+                    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                }) : '-';
+
+                // Data Jadwal dari Input Customer (Konfirmasi)
+                const jadwalFix = data.jadwalBongkar ? data.jadwalBongkar : 'BELUM KONFIRMASI';
+                
+                // Logika Warna Status
+                const statusKls = data.status === 'CONFIRMED' 
+                    ? 'bg-green-50 text-green-700 border-green-200' 
+                    : 'bg-yellow-50 text-yellow-700 border-yellow-200';
+
+                const statusLabel = data.status === 'CONFIRMED' ? 'Confirmed' : 'Pending';
+                const statusIcon = data.status === 'CONFIRMED' ? 'fa-check-circle' : 'fa-clock';
+
+                tableBody.innerHTML += `
+                    <tr class="hover:bg-blue-50/50 transition-all">
+                        <td class="p-5 text-xs font-mono text-gray-500">${tglRequest}</td>
+                        <td class="p-5 font-bold text-blue-700">${data.noDeliv}</td>
+                        <td class="p-5 text-sm font-semibold text-gray-700">${data.nopol}</td>
+                        <td class="p-5 text-sm text-gray-600">${data.tujuan}</td>
+                        <td class="p-5 text-center">
+                            <span class="status-badge ${statusKls}">
+                                <i class="fas ${statusIcon} mr-1"></i> ${statusLabel}
+                            </span>
+                        </td>
+                        <td class="p-5">
+                            <div class="text-sm ${data.jadwalBongkar ? 'text-green-600 font-bold' : 'text-gray-300 italic font-medium'}">
+                                <i class="far fa-calendar-alt mr-2"></i> ${jadwalFix}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        });
+    </script>
+</body>
+</html>

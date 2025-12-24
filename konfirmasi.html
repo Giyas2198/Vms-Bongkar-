@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VMS - Input Jadwal Bongkar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: url('truck10.jpeg') no-repeat center center fixed; background-size: cover; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+    </style>
+</head>
+<body class="p-4">
+    <div class="glass w-full max-w-md p-8">
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">Tentukan Jadwal</h2>
+        <p id="subHeader" class="text-blue-600 text-sm mb-6 font-medium"></p>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tanggal Bongkar</label>
+                <input type="date" id="tgl" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Jam Bongkar</label>
+                <input type="time" id="jam" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <button onclick="updateJadwal()" id="btnSave" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95">
+                KONFIRMASI JADWAL SEKARANG
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // CONFIG FIREBASE (Sama dengan index.html)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCWsxfve--l3x9xZ54DspANs3HaUswjQZc",
+            authDomain: "booking-customer-d5838.firebaseapp.com",
+            projectId: "booking-customer-d5838",
+            storageBucket: "booking-customer-d5838.appspot.com",
+            messagingSenderId: "535433870312",
+            appId: "1:535433870312:web:8ec3b6b7f97196ce2cc25d"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const params = new URLSearchParams(window.location.search);
+        const noDeliv = params.get('id');
+        const cust = params.get('cust');
+        document.getElementById('subHeader').innerText = `Konfirmasi untuk No Delivery: ${noDeliv}`;
+
+        window.updateJadwal = async function() {
+            const tglVal = document.getElementById('tgl').value;
+            const jamVal = document.getElementById('jam').value;
+            if(!tglVal || !jamVal) return alert("Mohon isi tanggal dan jam!");
+
+            document.getElementById('btnSave').innerText = "⏳ Menyimpan...";
+            
+            try {
+                const q = query(collection(db, "bookings"), where("noDeliv", "==", noDeliv));
+                const snap = await getDocs(q);
+                
+                if (snap.empty) throw "Data tidak ditemukan";
+
+                const docRef = doc(db, "bookings", snap.docs[0].id);
+                await updateDoc(docRef, {
+                    status: "CONFIRMED",
+                    jadwalBongkar: `${tglVal} Jam ${jamVal}`,
+                    konfirmasiTime: serverTimestamp()
+                });
+
+                alert("Berhasil! Jadwal telah terupdate di Monitoring.");
+                window.location.href = "monitoring.html";
+            } catch (e) {
+                alert("Error: " + e);
+            }
+        }
+    </script>
+</body>
+</html>
